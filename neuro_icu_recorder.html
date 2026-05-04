@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Neuro ICU">
+<title>Neuro ICU System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+:root {
+  --bg: #0a0c0f;
+  --bg2: #111318;
+  --bg3: #1a1d24;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0f0ee;
+  --text2: #8a8d96;
+  --text3: #555860;
+  --accent: #4ade9b;
+  --accent2: #2db870;
+  --red: #ff5a5a;
+  --amber: #f5a623;
+  --blue: #5b9cf6;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6; overflow-x: hidden; }
+
+/* PIN SCREEN */
+#pin-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 100; padding: 2rem;
+}
+.pin-logo { font-family: var(--mono); font-size: 11px; letter-spacing: 3px; color: var(--text3); text-transform: uppercase; margin-bottom: 3rem; }
+.pin-title { font-size: 22px; font-weight: 300; color: var(--text); margin-bottom: 0.5rem; text-align: center; }
+.pin-sub { font-size: 13px; color: var(--text2); margin-bottom: 2.5rem; text-align: center; }
+.pin-dots { display: flex; gap: 16px; margin-bottom: 2.5rem; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--border2); background: transparent; transition: all 0.2s; }
+.pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+.pin-dot.error { background: var(--red); border-color: var(--red); animation: shake 0.4s; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+.pin-grid { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+.pin-key {
+  height: 72px; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text); font-size: 22px; font-weight: 300;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.1s; font-family: var(--mono); user-select: none;
+}
+.pin-key:active { background: var(--bg3); border-color: var(--border2); transform: scale(0.95); }
+.pin-key.del { font-size: 16px; color: var(--text2); }
+.pin-key.empty { visibility: hidden; }
+.pin-error-msg { font-size: 13px; color: var(--red); margin-top: 1.5rem; min-height: 20px; text-align: center; }
+.pin-setup { font-size: 13px; color: var(--text3); margin-top: 2rem; text-align: center; }
+.pin-setup a { color: var(--accent); text-decoration: none; cursor: pointer; }
+
+/* MAIN APP */
+#main-app { display: none; min-height: 100vh; max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
+
+/* NAV */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: var(--bg2); border-top: 1px solid var(--border);
+  display: flex; padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  z-index: 50;
+}
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; cursor: pointer; transition: all 0.15s; }
+.nav-icon { font-size: 20px; line-height: 1; }
+.nav-label { font-size: 10px; font-family: var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text3); }
+.nav-item.active .nav-label { color: var(--accent); }
+.nav-item.active .nav-icon { filter: none; }
+
+/* SCREENS */
+.screen { display: none; padding: 1.5rem 1.25rem; }
+.screen.active { display: block; }
+
+/* HEADER */
+.app-header { padding: 1.5rem 1.25rem 0; }
+.app-wordmark { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+.app-title { font-size: 24px; font-weight: 300; color: var(--text); }
+.app-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+/* MODE TOGGLE */
+.mode-row { display: flex; gap: 8px; margin: 1.25rem 0; }
+.mode-btn {
+  flex: 1; padding: 10px 8px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: transparent;
+  font-size: 12px; font-family: var(--mono); letter-spacing: 0.5px;
+  color: var(--text2); cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(74,222,155,0.06); }
+
+/* HINT */
+.hint {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  font-size: 12px; color: var(--text2); line-height: 1.6; margin-bottom: 1.25rem;
+  border-left: 2px solid var(--accent);
+}
+
+/* RECORD BUTTON */
+.rec-wrap { display: flex; flex-direction: column; align-items: center; padding: 1.5rem 0; }
+.rec-outer {
+  width: 120px; height: 120px; border-radius: 50%;
+  border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.25rem; position: relative; cursor: pointer;
+  transition: all 0.2s;
+}
+.rec-outer:active { transform: scale(0.96); }
+.rec-outer.recording { border-color: var(--red); animation: ring-pulse 2s ease-in-out infinite; }
+@keyframes ring-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,90,90,0.3)} 50%{box-shadow:0 0 0 16px rgba(255,90,90,0)} }
+.rec-inner {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.rec-outer.recording .rec-inner { background: rgba(255,90,90,0.15); border-color: var(--red); }
+.rec-icon { width: 28px; height: 28px; fill: var(--text2); transition: fill 0.2s; }
+.rec-outer.recording .rec-icon { fill: var(--red); }
+.rec-label { font-size: 13px; color: var(--text2); font-family: var(--mono); letter-spacing: 1px; text-transform: uppercase; }
+.rec-label.recording { color: var(--red); }
+.timer { font-family: var(--mono); font-size: 32px; font-weight: 400; color: var(--text); margin: 0.75rem 0; letter-spacing: 3px; }
+
+/* LIVE TRANSCRIPT */
+.transcript-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px;
+  min-height: 100px; max-height: 180px; overflow-y: auto;
+  font-size: 14px; color: var(--text); line-height: 1.7;
+  margin: 1rem 0; outline: none;
+}
+.transcript-box:focus { border-color: var(--border2); }
+.transcript-box.dim { color: var(--text2); font-style: italic; }
+
+/* BUTTONS */
+.btn-row { display: flex; gap: 10px; margin-top: 1rem; }
+.btn {
+  flex: 1; padding: 13px 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border2); background: transparent;
+  font-size: 13px; font-family: var(--mono); letter-spacing: 0.5px;
+  color: var(--text2); cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.btn:hover { background: var(--bg3); }
+.btn:active { transform: scale(0.98); }
+.btn.primary { border-color: var(--accent); color: var(--accent); background: rgba(74,222,155,0.06); }
+.btn.primary:hover { background: rgba(74,222,155,0.12); }
+.btn.danger { border-color: var(--red); color: var(--red); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* STOP ROW */
+.stop-row { display: flex; gap: 10px; width: 100%; margin-top: 1rem; }
+
+/* SECTION CARDS */
+.section-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 10px;
+}
+.section-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 8px;
+}
+.section-content { font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
+.section-content.muted { color: var(--text2); font-size: 13px; }
+
+/* LOADING */
+.loading-wrap { display: flex; flex-direction: column; align-items: center; padding: 3rem 0; }
+.spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid var(--border2); border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite; margin-bottom: 1.25rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; color: var(--text2); text-transform: uppercase; }
+
+/* RESULTS HEADER */
+.result-title { font-size: 20px; font-weight: 300; color: var(--text); margin-bottom: 4px; }
+.result-dx { font-family: var(--mono); font-size: 12px; color: var(--accent); letter-spacing: 1px; margin-bottom: 1.5rem; }
+
+/* LIBRARY */
+.lib-toggle { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+.lib-btn {
+  flex: 1; padding: 9px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: transparent;
+  font-size: 12px; font-family: var(--mono); letter-spacing: 0.5px;
+  color: var(--text3); cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.lib-btn.active { border-color: var(--border2); color: var(--text); background: var(--bg2); }
+
+.entry-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 10px;
+  cursor: pointer; transition: all 0.15s;
+}
+.entry-card:active { background: var(--bg3); }
+.entry-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.entry-dx { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 0.5px; margin-bottom: 3px; }
+.entry-date { font-size: 12px; color: var(--text3); }
+
+.empty-wrap { text-align: center; padding: 3rem 0; }
+.empty-wrap p { font-size: 14px; color: var(--text2); line-height: 1.8; }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text); padding: 10px 20px; border-radius: 30px;
+  font-size: 13px; font-family: var(--mono); letter-spacing: 0.5px;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; z-index: 200;
+}
+.toast.show { opacity: 1; }
+
+/* DETAIL BACK */
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+  color: var(--text2); text-transform: uppercase; cursor: pointer;
+  background: none; border: none; padding: 0; margin-bottom: 1.25rem;
+}
+.back-btn:active { color: var(--text); }
+
+/* SETTINGS */
+.settings-section { margin-bottom: 2rem; }
+.settings-label { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
+.settings-row {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.settings-key { font-size: 14px; color: var(--text); }
+.settings-val { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+.settings-input {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  color: var(--text); font-size: 14px; font-family: var(--sans);
+  outline: none; margin-bottom: 8px;
+}
+.settings-input:focus { border-color: var(--border2); }
+</style>
+</head>
+<body>
+
+<!-- PIN SCREEN -->
+<div id="pin-screen">
+  <div class="pin-logo">Neuro ICU System</div>
+  <div id="pin-setup-view">
+    <div class="pin-title" id="pin-title">Create your PIN</div>
+    <div class="pin-sub" id="pin-sub">Choose a 4-digit PIN to protect your entries</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="pin-grid">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key empty"></button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key del" onclick="pinDel()">⌫</button>
+    </div>
+    <div class="pin-error-msg" id="pin-error"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app">
+  <div class="app-header">
+    <div class="app-wordmark">Neuro ICU</div>
+    <div class="app-title" id="screen-title">New entry</div>
+    <div class="app-sub" id="screen-sub">What are you capturing today?</div>
+  </div>
+
+  <!-- RECORD SCREEN -->
+  <div id="screen-record" class="screen active">
+
+    <div id="view-idle">
+      <div class="mode-row">
+        <button class="mode-btn active" id="mode-case" onclick="setMode('case')">Case presentation</button>
+        <button class="mode-btn" id="mode-edu" onclick="setMode('education')">Education entry</button>
+      </div>
+      <div id="hint-case" class="hint">Present like you're talking to an attending: one-liner → history → exam → imaging → vitals/labs → your assessment → what you're unsure about.</div>
+      <div id="hint-edu" class="hint" style="display:none;">Dictate a pearl, guideline summary, or lesson from an attending. Say the topic and category first — e.g. "Vascular — SAH vasospasm management..."</div>
+      <div class="rec-wrap">
+        <div class="rec-outer" id="rec-outer" onclick="startRecording()">
+          <div class="rec-inner">
+            <svg class="rec-icon" viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-7 11a7 7 0 0 0 14 0h2a9 9 0 0 1-8 8.94V23h-2v-2.06A9 9 0 0 1 3 12h2z"/></svg>
+          </div>
+        </div>
+        <div class="rec-label" id="rec-label">Tap to record</div>
+      </div>
+    </div>
+
+    <div id="view-recording" style="display:none;">
+      <div class="rec-wrap">
+        <div class="rec-outer recording" id="rec-outer-live" onclick="stopRecording()">
+          <div class="rec-inner">
+            <svg class="rec-icon" viewBox="0 0 24 24" style="fill:#ff5a5a;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          </div>
+        </div>
+        <div class="timer" id="timer">0:00</div>
+        <div class="rec-label recording">Tap to stop</div>
+      </div>
+      <div class="transcript-box" id="live-transcript">Listening...</div>
+      <div class="btn-row">
+        <button class="btn danger" onclick="cancelRecording()">Cancel</button>
+      </div>
+    </div>
+
+    <div id="view-review" style="display:none;">
+      <div style="margin-bottom:1rem;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Review &amp; edit transcript</div>
+        <div class="transcript-box" contenteditable="true" id="final-transcript"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn danger" onclick="backToIdle()">Discard</button>
+        <button class="btn primary" onclick="runAnalysis()">Analyze →</button>
+      </div>
+    </div>
+
+    <div id="view-analyzing" style="display:none;">
+      <div class="loading-wrap">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-msg">Organizing...</div>
+      </div>
+    </div>
+
+    <div id="view-results" style="display:none;">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-dx" id="result-dx"></div>
+      <div id="results-content"></div>
+      <div class="btn-row" style="margin-top:1.5rem;">
+        <button class="btn" onclick="backToIdle()">New entry</button>
+        <button class="btn primary" id="send-btn" onclick="sendEntry()">Send to Gmail →</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LIBRARY SCREEN -->
+  <div id="screen-library" class="screen">
+    <div class="lib-toggle">
+      <button class="lib-btn active" id="lib-case-btn" onclick="filterLib('case')">Cases</button>
+      <button class="lib-btn" id="lib-edu-btn" onclick="filterLib('education')">Education</button>
+    </div>
+    <div id="lib-list"></div>
+  </div>
+
+  <!-- DETAIL SCREEN -->
+  <div id="screen-detail" class="screen">
+    <button class="back-btn" onclick="backToLib()">← Library</button>
+    <div id="detail-content"></div>
+    <div class="btn-row" style="margin-top:1.5rem;">
+      <button class="btn danger" onclick="deleteEntry()">Delete entry</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="screen-settings" class="screen">
+    <div class="settings-section">
+      <div class="settings-label">Email settings</div>
+      <input class="settings-input" id="set-email" type="email" placeholder="Your Gmail address" />
+      <button class="btn primary" onclick="saveSettings()" style="margin-top:4px;">Save</button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-label">Security</div>
+      <div class="settings-row">
+        <div class="settings-key">Change PIN</div>
+        <button class="btn" style="flex:0;padding:8px 16px;font-size:12px;" onclick="changePin()">Change</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-label">About</div>
+      <div class="settings-row"><div class="settings-key">Entries saved</div><div class="settings-val" id="entry-count">0</div></div>
+      <div class="settings-row"><div class="settings-key">Version</div><div class="settings-val">1.0</div></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" id="nav-record" onclick="showScreen('record')">
+      <div class="nav-icon">⏺</div>
+      <div class="nav-label">Record</div>
+    </div>
+    <div class="nav-item" id="nav-library" onclick="showScreen('library')">
+      <div class="nav-icon">📂</div>
+      <div class="nav-label">Library</div>
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="showScreen('settings')">
+      <div class="nav-icon">⚙️</div>
+      <div class="nav-label">Settings</div>
+    </div>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// CONFIG
+const EMAILJS_PUBLIC = 'gCyvNmIi4hGWgi0hu';
+const EMAILJS_SERVICE = 'service_vcsjogh';
+const EMAILJS_TEMPLATE = 'template_vqjc20h';
+const ANTHROPIC_KEY_NOTE = 'Uses Anthropic API via fetch';
+const STORAGE_KEY = 'neuricu_v1';
+const PIN_KEY = 'neuricu_pin';
+const EMAIL_KEY = 'neuricu_email';
+
+// STATE
+let mode = 'case';
+let recognition = null;
+let isRecording = false;
+let timerInterval = null;
+let seconds = 0;
+let fullTranscript = '';
+let interimTranscript = '';
+let currentAnalysis = null;
+let libFilter = 'case';
+let viewingIdx = null;
+let pinBuffer = '';
+let pinStage = 'check'; // 'setup', 'confirm', 'check'
+let pinSetupFirst = '';
+
+// INIT
+emailjs.init(EMAILJS_PUBLIC);
+window.addEventListener('load', initPin);
+
+function getEntries() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { return []; } }
+function saveEntries(a) { localStorage.setItem(STORAGE_KEY, JSON.stringify(a)); }
+function getSavedPin() { return localStorage.getItem(PIN_KEY) || ''; }
+function getSavedEmail() { return localStorage.getItem(EMAIL_KEY) || ''; }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// PIN LOGIC
+function initPin() {
+  const saved = getSavedPin();
+  if (!saved) {
+    pinStage = 'setup';
+    document.getElementById('pin-title').textContent = 'Create your PIN';
+    document.getElementById('pin-sub').textContent = 'Choose a 4-digit PIN to protect your entries';
+  } else {
+    pinStage = 'check';
+    document.getElementById('pin-title').textContent = 'Welcome back';
+    document.getElementById('pin-sub').textContent = 'Enter your PIN to continue';
+  }
+}
+
+function pinKey(k) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += k;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(processPinInput, 150);
+}
+
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('d' + i);
+    d.classList.toggle('filled', i < pinBuffer.length);
+    d.classList.remove('error');
+  }
+}
+
+function processPinInput() {
+  if (pinStage === 'setup') {
+    pinSetupFirst = pinBuffer;
+    pinBuffer = '';
+    updatePinDots();
+    document.getElementById('pin-title').textContent = 'Confirm your PIN';
+    document.getElementById('pin-sub').textContent = 'Enter the same PIN again';
+  } else if (pinStage === 'confirm') {
+    if (pinBuffer === pinSetupFirst) {
+      localStorage.setItem(PIN_KEY, pinBuffer);
+      unlockApp();
+    } else {
+      showPinError("PINs don't match — try again");
+      pinStage = 'setup';
+      pinSetupFirst = '';
+      document.getElementById('pin-title').textContent = 'Create your PIN';
+      document.getElementById('pin-sub').textContent = 'Choose a 4-digit PIN';
+    }
+  } else if (pinStage === 'check') {
+    if (pinBuffer === getSavedPin()) {
+      unlockApp();
+    } else {
+      showPinError('Incorrect PIN');
+    }
+  }
+  if (pinStage === 'setup' && pinSetupFirst) pinStage = 'confirm';
+}
+
+function showPinError(msg) {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('d' + i);
+    d.classList.add('error');
+  }
+  document.getElementById('pin-error').textContent = msg;
+  setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 600);
+}
+
+function unlockApp() {
+  document.getElementById('pin-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  const email = getSavedEmail();
+  if (email) document.getElementById('set-email').value = email;
+  updateEntryCount();
+}
+
+function changePin() {
+  localStorage.removeItem(PIN_KEY);
+  pinBuffer = ''; pinSetupFirst = ''; pinStage = 'setup';
+  document.getElementById('pin-title').textContent = 'Create new PIN';
+  document.getElementById('pin-sub').textContent = 'Choose a new 4-digit PIN';
+  document.getElementById('pin-error').textContent = '';
+  updatePinDots();
+  document.getElementById('pin-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+}
+
+// SCREENS
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-' + name).classList.add('active');
+  const titles = { record: ['New entry', 'What are you capturing today?'], library: ['Library', 'Your saved cases and education entries'], settings: ['Settings', 'Configure your system'] };
+  if (titles[name]) {
+    document.getElementById('screen-title').textContent = titles[name][0];
+    document.getElementById('screen-sub').textContent = titles[name][1];
+  }
+  if (name === 'library') renderLib();
+  if (name === 'settings') updateEntryCount();
+}
+
+function updateEntryCount() {
+  document.getElementById('entry-count').textContent = getEntries().length;
+}
+
+// MODE
+function setMode(m) {
+  mode = m;
+  document.getElementById('mode-case').classList.toggle('active', m === 'case');
+  document.getElementById('mode-edu').classList.toggle('active', m === 'education');
+  document.getElementById('hint-case').style.display = m === 'case' ? 'block' : 'none';
+  document.getElementById('hint-edu').style.display = m === 'education' ? 'block' : 'none';
+}
+
+// RECORDING
+function startRecording() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Speech recognition requires Chrome or Safari.'); return; }
+  fullTranscript = ''; interimTranscript = '';
+  recognition = new SR();
+  recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'en-US';
+  recognition.onresult = (e) => {
+    interimTranscript = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) fullTranscript += e.results[i][0].transcript + ' ';
+      else interimTranscript += e.results[i][0].transcript;
+    }
+    const el = document.getElementById('live-transcript');
+    if (el) { el.textContent = fullTranscript + interimTranscript; el.classList.remove('dim'); }
+  };
+  recognition.onerror = (e) => { if (e.error !== 'aborted') console.warn(e.error); };
+  recognition.onend = () => { if (isRecording) recognition.start(); };
+  recognition.start();
+  isRecording = true; seconds = 0;
+  timerInterval = setInterval(() => {
+    seconds++;
+    const el = document.getElementById('timer');
+    if (el) el.textContent = `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+  }, 1000);
+  document.getElementById('view-idle').style.display = 'none';
+  document.getElementById('view-recording').style.display = 'block';
+}
+
+function stopRecording() {
+  isRecording = false; clearInterval(timerInterval);
+  if (recognition) { recognition.onend = null; recognition.stop(); }
+  const text = (fullTranscript + interimTranscript).trim();
+  document.getElementById('view-recording').style.display = 'none';
+  document.getElementById('view-review').style.display = 'block';
+  const ft = document.getElementById('final-transcript');
+  if (text) { ft.textContent = text; ft.classList.remove('dim'); }
+  else { ft.textContent = 'No speech detected — type your entry here.'; ft.classList.add('dim'); }
+}
+
+function cancelRecording() {
+  isRecording = false; clearInterval(timerInterval);
+  if (recognition) { recognition.onend = null; recognition.stop(); }
+  backToIdle();
+}
+
+function backToIdle() {
+  ['view-idle','view-recording','view-review','view-analyzing','view-results'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = id === 'view-idle' ? 'block' : 'none';
+  });
+  currentAnalysis = null;
+  const btn = document.getElementById('send-btn');
+  if (btn) { btn.textContent = 'Send to Gmail →'; btn.disabled = false; }
+}
+
+// AI ANALYSIS
+async function runAnalysis() {
+  const transcript = document.getElementById('final-transcript').textContent.trim();
+  if (!transcript || transcript.includes('No speech detected')) { alert('Please provide a transcript first.'); return; }
+  document.getElementById('view-review').style.display = 'none';
+  document.getElementById('view-analyzing').style.display = 'block';
+
+  const caseMsgs = ['Organizing case...', 'Localizing neurologic process...', 'Building differential...', 'Generating ICU plan...', 'Identifying gaps...'];
+  const eduMsgs = ['Reading your entry...', 'Extracting key points...', 'Filing by category...', 'Writing pearl...'];
+  const msgs = mode === 'case' ? caseMsgs : eduMsgs;
+  let mi = 0;
+  const msgInt = setInterval(() => { mi = (mi+1)%msgs.length; const el = document.getElementById('loading-msg'); if(el) el.textContent = msgs[mi]; }, 2200);
+
+  const caseSystem = `You are a Neurocritical Care AI Assistant helping a new neuro ICU nurse practitioner think like an attending. All case information is de-identified. Respond ONLY in valid JSON — no preamble, no markdown fences.
+
+Return exactly:
+{"title":"short descriptive case title","diagnosis":"primary or working diagnosis","oneliner":"one sentence summary","timeline":"brief chronological summary","neuroExam":"key exam findings or not provided","problemList":["..."],"immediatePriorities":["..."],"localization":"neurologic localization or not localizable","differential":{"Vascular":[],"Neurophysiologic":[],"Infectious":[],"Metabolic":[],"Toxic":[],"Autoimmune/inflammatory":[],"Cardiovascular":[],"Circulatory/hemodynamic":[],"Anatomic/structural":[],"Oncologic":[]},"icuPlan":{"Neurologic":"","Cardiovascular":"","Respiratory":"","Renal/electrolytes":"","Infectious disease":"","Hematologic":"","Endocrine":"","GI/nutrition":"","Lines/drains":"","DVT prophylaxis":""},"whatImMissing":["..."],"clinicalPearl":"one key pearl","topicsToReview":["topic 1","topic 2","topic 3"]}`;
+
+  const eduSystem = `You are a Neurocritical Care AI Assistant helping a new neuro ICU nurse practitioner build her education library. Respond ONLY in valid JSON — no preamble, no markdown fences.
+
+Return exactly:
+{"title":"concise topic title","category":"one of: Vascular / Neurophysiologic / Infectious / Metabolic / Toxic / Autoimmune/inflammatory / Cardiovascular / Circulatory/hemodynamic / Anatomic/structural / Oncologic","whyItMatters":"1-2 sentences on why this matters in neuro ICU","keyFeatures":["..."],"howItPresents":["..."],"whatToLookFor":["..."],"immediatePriorities":["..."],"commonPitfalls":["..."],"pearls":["..."]}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': '', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: mode === 'case' ? caseSystem : eduSystem,
+        messages: [{ role: 'user', content: `Analyze this ${mode === 'case' ? 'case presentation' : 'education entry'}:\n\n${transcript}` }]
+      })
+    });
+    clearInterval(msgInt);
+    const data = await res.json();
+
+    // Handle API key missing — use Claude via proxy instead
+    if (data.error) throw new Error(data.error.message);
+
+    const raw = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    let parsed;
+    try { parsed = JSON.parse(raw.replace(/```json|```/g, '').trim()); }
+    catch(e) { parsed = { title: 'Entry', oneliner: raw, diagnosis: '' }; }
+
+    currentAnalysis = { ...parsed, type: mode, transcript, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) };
+    showResults();
+  } catch(err) {
+    clearInterval(msgInt);
+    // Fallback: save transcript as-is
+    currentAnalysis = { title: 'Untitled entry', type: mode, transcript, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), oneliner: transcript };
+    showResults();
+    showToast('AI unavailable — transcript saved');
+  }
+}
+
+function showResults() {
+  document.getElementById('view-analyzing').style.display = 'none';
+  document.getElementById('view-results').style.display = 'block';
+  document.getElementById('result-title').textContent = currentAnalysis.title || 'Analysis complete';
+  document.getElementById('result-dx').textContent = (currentAnalysis.diagnosis || currentAnalysis.category || '').toUpperCase();
+  document.getElementById('results-content').innerHTML = currentAnalysis.type === 'case' ? renderCaseHTML(currentAnalysis) : renderEduHTML(currentAnalysis);
+}
+
+// EMAIL
+async function sendEntry() {
+  if (!currentAnalysis) return;
+  const email = getSavedEmail();
+  if (!email) { showToast('Add your email in Settings first'); showScreen('settings'); return; }
+
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+
+  const isCase = currentAnalysis.type === 'case';
+  const subject = isCase
+    ? `[Neuro Case Library] ${currentAnalysis.title || 'Untitled'} — ${currentAnalysis.date}`
+    : `[Neuro Education Library] ${currentAnalysis.title || 'Untitled'} | ${currentAnalysis.category || ''} — ${currentAnalysis.date}`;
+
+  const body = isCase ? buildCaseEmail(currentAnalysis) : buildEduEmail(currentAnalysis);
+
+  try {
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, { subject, body, to_email: email });
+    const entries = getEntries();
+    entries.unshift(currentAnalysis);
+    saveEntries(entries);
+    btn.textContent = 'Sent ✓';
+    showToast('Sent to Gmail · saved locally');
+  } catch(err) {
+    const entries = getEntries();
+    entries.unshift(currentAnalysis);
+    saveEntries(entries);
+    btn.textContent = 'Saved locally ✓';
+    showToast('Saved locally — check Gmail settings');
+  }
+}
+
+// SETTINGS
+function saveSettings() {
+  const email = document.getElementById('set-email').value.trim();
+  if (!email) { showToast('Enter a valid email'); return; }
+  localStorage.setItem(EMAIL_KEY, email);
+  showToast('Settings saved');
+}
+
+// LIBRARY
+function renderLib() {
+  const all = getEntries().filter(e => e.type === libFilter);
+  const list = document.getElementById('lib-list');
+  if (!all.length) {
+    list.innerHTML = `<div class="empty-wrap"><p>No ${libFilter === 'case' ? 'cases' : 'education entries'} yet.<br>Hit Record to capture your first ${libFilter === 'case' ? 'patient presentation' : 'pearl or guideline summary'}.</p></div>`;
+    return;
+  }
+  const allEntries = getEntries();
+  list.innerHTML = all.map(e => {
+    const realIdx = allEntries.indexOf(e);
+    return `<div class="entry-card" onclick="viewEntry(${realIdx})">
+      <div class="entry-title">${esc(e.title || 'Untitled')}</div>
+      <div class="entry-dx">${esc(e.diagnosis || e.category || '')}</div>
+      <div class="entry-date">${e.date || ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterLib(f) {
+  libFilter = f;
+  document.getElementById('lib-case-btn').classList.toggle('active', f === 'case');
+  document.getElementById('lib-edu-btn').classList.toggle('active', f === 'education');
+  renderLib();
+}
+
+function viewEntry(idx) {
+  const entries = getEntries();
+  const e = entries[idx];
+  viewingIdx = idx;
+  document.getElementById('detail-content').innerHTML = e.type === 'case' ? renderCaseHTML(e) : renderEduHTML(e);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-detail').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-library').classList.add('active');
+  document.getElementById('screen-title').textContent = e.title || 'Entry';
+  document.getElementById('screen-sub').textContent = e.date || '';
+}
+
+function backToLib() {
+  showScreen('library');
+  viewingIdx = null;
+}
+
+function deleteEntry() {
+  if (viewingIdx === null) return;
+  if (!confirm('Delete this entry?')) return;
+  const entries = getEntries();
+  entries.splice(viewingIdx, 1);
+  saveEntries(entries);
+  viewingIdx = null;
+  backToLib();
+}
+
+// RENDER
+function sec(label, content) {
+  if (!content) return '';
+  return `<div class="section-card"><div class="section-label">${label}</div><div class="section-content">${esc(content)}</div></div>`;
+}
+function listSec(label, arr) {
+  if (!arr || !arr.length) return '';
+  return `<div class="section-card"><div class="section-label">${label}</div><div class="section-content">${arr.map(i => `• ${esc(i)}`).join('\n')}</div></div>`;
+}
+
+function renderCaseHTML(a) {
+  const diff = a.differential ? Object.entries(a.differential).filter(([,v]) => v && v.length).map(([cat,items]) => `${cat}: ${items.join(', ')}`).join('\n') : '';
+  const plan = a.icuPlan ? Object.entries(a.icuPlan).filter(([,v]) => v && v !== 'not provided' && v !== '').map(([s,p]) => `${s}: ${p}`).join('\n') : '';
+  return sec('One-liner', a.oneliner) + sec('Timeline', a.timeline) + sec('Neuro exam', a.neuroExam) + listSec('Problem list', a.problemList) + listSec('Immediate priorities', a.immediatePriorities) + sec('Localization', a.localization) + (diff ? `<div class="section-card"><div class="section-label">Differential diagnosis</div><div class="section-content">${esc(diff)}</div></div>` : '') + (plan ? `<div class="section-card"><div class="section-label">ICU plan</div><div class="section-content">${esc(plan)}</div></div>` : '') + listSec("What I might be missing", a.whatImMissing) + sec('Clinical pearl', a.clinicalPearl) + listSec('Topics to review', a.topicsToReview) + (a.transcript ? `<div class="section-card"><div class="section-label">Original transcript</div><div class="section-content muted">${esc(a.transcript)}</div></div>` : '');
+}
+
+function renderEduHTML(a) {
+  return sec('Category', a.category) + sec('Why it matters in neuro ICU', a.whyItMatters) + listSec('Key features', a.keyFeatures) + listSec('How it presents', a.howItPresents) + listSec('What to look for', a.whatToLookFor) + listSec('Immediate priorities', a.immediatePriorities) + listSec('Common pitfalls', a.commonPitfalls) + listSec('Pearls', a.pearls) + (a.transcript ? `<div class="section-card"><div class="section-label">Original dictation</div><div class="section-content muted">${esc(a.transcript)}</div></div>` : '');
+}
+
+function buildCaseEmail(a) {
+  const diff = a.differential ? Object.entries(a.differential).filter(([,v]) => v && v.length).map(([cat,items]) => `  ${cat}: ${items.join(', ')}`).join('\n') : 'not provided';
+  const plan = a.icuPlan ? Object.entries(a.icuPlan).filter(([,v]) => v && v !== 'not provided' && v !== '').map(([s,p]) => `  ${s}: ${p}`).join('\n') : 'not provided';
+  return `NEURO ICU CASE LIBRARY ENTRY\nDate: ${a.date || ''}\n${'━'.repeat(40)}\n\nONE-LINER\n${a.oneliner || ''}\n\nDIAGNOSIS\n${a.diagnosis || ''}\n\nTIMELINE\n${a.timeline || ''}\n\nNEURO EXAM\n${a.neuroExam || 'not provided'}\n\nPROBLEM LIST\n${(a.problemList||[]).map(p=>`• ${p}`).join('\n')}\n\nIMMEDIATE PRIORITIES\n${(a.immediatePriorities||[]).map(p=>`• ${p}`).join('\n')}\n\nLOCALIZATION\n${a.localization || ''}\n\nDIFFERENTIAL DIAGNOSIS\n${diff}\n\nSYSTEM-BY-SYSTEM ICU PLAN\n${plan}\n\nWHAT I MIGHT BE MISSING\n${(a.whatImMissing||[]).map(p=>`• ${p}`).join('\n')}\n\nCLINICAL PEARL\n${a.clinicalPearl || ''}\n\nTOPICS TO REVIEW\n${(a.topicsToReview||[]).map(t=>`• ${t}`).join('\n')}\n\n${'━'.repeat(40)}\nORIGINAL TRANSCRIPT\n${a.transcript || ''}`;
+}
+
+function buildEduEmail(a) {
+  return `NEURO ICU EDUCATION LIBRARY ENTRY\nDate: ${a.date || ''}\n${'━'.repeat(40)}\n\nTOPIC: ${a.title || ''}\nCATEGORY: ${a.category || ''}\n\nWHY IT MATTERS IN NEURO ICU\n${a.whyItMatters || ''}\n\nKEY FEATURES\n${(a.keyFeatures||[]).map(p=>`• ${p}`).join('\n')}\n\nHOW IT PRESENTS\n${(a.howItPresents||[]).map(p=>`• ${p}`).join('\n')}\n\nWHAT TO LOOK FOR\n${(a.whatToLookFor||[]).map(p=>`• ${p}`).join('\n')}\n\nIMMEDIATE PRIORITIES\n${(a.immediatePriorities||[]).map(p=>`• ${p}`).join('\n')}\n\nCOMMON PITFALLS\n${(a.commonPitfalls||[]).map(p=>`• ${p}`).join('\n')}\n\nPEARLS\n${(a.pearls||[]).map(p=>`• ${p}`).join('\n')}\n\n${'━'.repeat(40)}\nORIGINAL DICTATION\n${a.transcript || ''}`;
+}
+
+function esc(str) { if (!str) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>
