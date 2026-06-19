@@ -638,10 +638,31 @@ async function runAnalysis() {
   let mi = 0;
   const msgInt = setInterval(() => { mi = (mi+1)%msgs.length; const el = document.getElementById('loading-msg'); if(el) el.textContent = msgs[mi]; }, 2200);
 
-  const caseSystem = `You are a Neurocritical Care AI Assistant helping a new neuro ICU nurse practitioner think like an attending. All case information is de-identified. Respond ONLY in valid JSON — no preamble, no markdown fences.
+  const caseSystem = `You are a Neurocritical Care AI Assistant helping a clinician document consults faster. All case information is de-identified. Respond ONLY in valid JSON — no preamble, no markdown fences.
 
-Return exactly:
-{"title":"short descriptive case title","diagnosis":"primary or working diagnosis","oneliner":"one sentence summary","timeline":"brief chronological summary","neuroExam":"key exam findings or not provided","problemList":["..."],"immediatePriorities":["..."],"localization":"neurologic localization or not localizable","differential":{"Vascular":[],"Neurophysiologic":[],"Infectious":[],"Metabolic":[],"Toxic":[],"Autoimmune/inflammatory":[],"Cardiovascular":[],"Circulatory/hemodynamic":[],"Anatomic/structural":[],"Oncologic":[]},"icuPlan":{"Neurologic":"","Cardiovascular":"","Respiratory":"","Renal/electrolytes":"","Infectious disease":"","Hematologic":"","Endocrine":"","GI/nutrition":"","Lines/drains":"","DVT prophylaxis":""},"whatImMissing":["..."],"clinicalPearl":"one key pearl","topicsToReview":["topic 1","topic 2","topic 3"]}`;
+Extract and organize for FASTEST DOCUMENTATION:
+
+{
+  "title": "short descriptive case title",
+  "diagnosis": "primary diagnosis",
+  "chiefComplaint": "chief complaint in 1-2 sentences",
+  "hpi": "organized history of present illness paragraph - this should be comprehensive and ready to paste into consult",
+  "assessment": "assessment/primary diagnosis statement - ready for consult template",
+  "neuro": "neurologic recommendations and monitoring",
+  "cardio": "cardiovascular system recommendations",
+  "pulmonary": "pulmonary/respiratory recommendations",
+  "renal": "renal/fluid/electrolyte recommendations",
+  "gi": "GI/nutrition recommendations",
+  "id": "infectious disease recommendations",
+  "heme": "hematologic recommendations",
+  "endo": "endocrine recommendations",
+  "prophylaxis": "DVT/stress ulcer prophylaxis",
+  "lines": "lines, drains, airway status",
+  "physicalExam": "key physical exam findings to note",
+  "labsToReview": "important labs to review or order",
+  "differential": ["condition 1", "condition 2", "condition 3"],
+  "whatImMissing": ["information gap 1", "information gap 2"]
+}`;
 
   const eduSystem = `You are a Neurocritical Care AI Assistant helping a new neuro ICU nurse practitioner build her education library. Respond ONLY in valid JSON — no preamble, no markdown fences.
 
@@ -794,9 +815,25 @@ function listSec(label, arr) {
 }
 
 function renderCaseHTML(a) {
-  const diff = a.differential ? Object.entries(a.differential).filter(([,v]) => v && v.length).map(([cat,items]) => `${cat}: ${items.join(', ')}`).join('\n') : '';
-  const plan = a.icuPlan ? Object.entries(a.icuPlan).filter(([,v]) => v && v !== 'not provided' && v !== '').map(([s,p]) => `${s}: ${p}`).join('\n') : '';
-  return sec('One-liner', a.oneliner) + sec('Timeline', a.timeline) + sec('Neuro exam', a.neuroExam) + listSec('Problem list', a.problemList) + listSec('Immediate priorities', a.immediatePriorities) + sec('Localization', a.localization) + (diff ? `<div class="section-card"><div class="section-label">Differential diagnosis</div><div class="section-content">${esc(diff)}</div></div>` : '') + (plan ? `<div class="section-card"><div class="section-label">ICU plan</div><div class="section-content">${esc(plan)}</div></div>` : '') + listSec("What I might be missing", a.whatImMissing) + sec('Clinical pearl', a.clinicalPearl) + listSec('Topics to review', a.topicsToReview) + (a.transcript ? `<div class="section-card"><div class="section-label">Original transcript</div><div class="section-content muted">${esc(a.transcript)}</div></div>` : '');
+  let html = '';
+  if (a.chiefComplaint) html += sec('Chief Complaint', a.chiefComplaint);
+  if (a.hpi) html += sec('History of Present Illness', a.hpi);
+  if (a.assessment) html += sec('Assessment', a.assessment);
+  if (a.neuro) html += sec('Neuro Recommendations', a.neuro);
+  if (a.cardio) html += sec('Cardio Recommendations', a.cardio);
+  if (a.pulmonary) html += sec('Pulmonary Recommendations', a.pulmonary);
+  if (a.renal) html += sec('Renal/Electrolytes', a.renal);
+  if (a.gi) html += sec('GI/Nutrition', a.gi);
+  if (a.id) html += sec('Infectious Disease', a.id);
+  if (a.heme) html += sec('Heme/Endo', a.heme);
+  if (a.prophylaxis) html += sec('Prophylaxis', a.prophylaxis);
+  if (a.lines) html += sec('Lines/Drains/Airways', a.lines);
+  if (a.physicalExam) html += sec('Physical Exam', a.physicalExam);
+  if (a.labsToReview) html += sec('Labs to Review', a.labsToReview);
+  if (a.differential && a.differential.length) html += listSec('Differential', a.differential);
+  if (a.whatImMissing && a.whatImMissing.length) html += listSec('What I\'m Missing', a.whatImMissing);
+  if (a.transcript) html += `<div class="section-card"><div class="section-label">Original Transcript</div><div class="section-content muted">${esc(a.transcript)}</div></div>`;
+  return html;
 }
 
 function renderEduHTML(a) {
