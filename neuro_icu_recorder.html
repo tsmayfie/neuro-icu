@@ -778,15 +778,35 @@ function filterLib(f) {
 
 function viewEntry(idx) {
   const entries = getEntries();
+  if (!entries || !entries[idx]) { console.error('Entry not found at index', idx); return; }
   const e = entries[idx];
   viewingIdx = idx;
-  document.getElementById('detail-content').innerHTML = e.type === 'case' ? renderCaseHTML(e) : renderEduHTML(e);
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-detail').classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('nav-library').classList.add('active');
-  document.getElementById('screen-title').textContent = e.title || 'Entry';
-  document.getElementById('screen-sub').textContent = e.date || '';
+  
+  try {
+    // Render based on type, with fallback
+    let html = '';
+    if (e.type === 'education') {
+      html = renderEduHTML(e);
+    } else {
+      html = renderCaseHTML(e);
+    }
+    
+    // Fallback if nothing rendered
+    if (!html || html.trim() === '') {
+      html = `<div class="section-card"><div class="section-label">Entry Data</div><div class="section-content">${esc(JSON.stringify(e, null, 2))}</div></div>`;
+    }
+    
+    document.getElementById('detail-content').innerHTML = html;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-detail').classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('nav-library').classList.add('active');
+    document.getElementById('screen-title').textContent = e.title || 'Entry';
+    document.getElementById('screen-sub').textContent = e.date || '';
+  } catch(err) {
+    console.error('Error opening entry:', err);
+    alert('Error opening entry: ' + err.message);
+  }
 }
 
 function backToLib() {
