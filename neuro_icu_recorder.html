@@ -113,9 +113,10 @@ function startRecord() {
   
   document.getElementById('rec-btn').textContent = '⏹ Stop Recording';
   document.getElementById('rec-btn').style.background = '#ff5a5a';
-  document.getElementById('save-btn').style.display = 'block';
-  document.getElementById('cancel-btn').style.display = 'block';
-  document.getElementById('transcript').value = '';
+  document.getElementById('rec-btn').disabled = false;
+  document.getElementById('save-btn').style.display = 'none';
+  document.getElementById('cancel-btn').style.display = 'none';
+  document.getElementById('transcript').value = 'Recording...';
   
   timerInt = setInterval(() => {
     recordTime++;
@@ -141,8 +142,13 @@ function stopRecord() {
   if(recognition) recognition.stop();
   clearInterval(timerInt);
   
+  // Keep transcript visible, show save buttons
+  document.getElementById('transcript').value = fullTranscript;
   document.getElementById('rec-btn').textContent = '🎤 Start Recording';
   document.getElementById('rec-btn').style.background = '#4ade9b';
+  document.getElementById('rec-btn').disabled = true;
+  document.getElementById('save-btn').style.display = 'block';
+  document.getElementById('cancel-btn').style.display = 'block';
 }
 
 function cancelRecord() {
