@@ -94,21 +94,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 <!-- PIN SCREEN -->
 <div id="pin-screen">
   <div class="pin-title">🧠 Neuro ICU</div>
-  <div class="pin-dots" id="pin-dots"></div>
-  <div class="pin-grid">
-    <button type="button" class="pin-key" onclick="window.addPin('1'); return false;">1</button>
-    <button type="button" class="pin-key" onclick="window.addPin('2'); return false;">2</button>
-    <button type="button" class="pin-key" onclick="window.addPin('3'); return false;">3</button>
-    <button type="button" class="pin-key" onclick="window.addPin('4'); return false;">4</button>
-    <button type="button" class="pin-key" onclick="window.addPin('5'); return false;">5</button>
-    <button type="button" class="pin-key" onclick="window.addPin('6'); return false;">6</button>
-    <button type="button" class="pin-key" onclick="window.addPin('7'); return false;">7</button>
-    <button type="button" class="pin-key" onclick="window.addPin('8'); return false;">8</button>
-    <button type="button" class="pin-key" onclick="window.addPin('9'); return false;">9</button>
-    <button type="button" class="pin-key" onclick="window.addPin('0'); return false;">0</button>
-    <button type="button" class="pin-key" onclick="window.delPin(); return false;">⌫</button>
-  </div>
-  <button type="button" class="pin-enter" onclick="window.checkPin(); return false;">Enter</button>
+  <p style="color:var(--text2); margin-bottom:2rem; text-align:center;">Enter 4-digit PIN</p>
+  <input type="password" id="pin-input" maxlength="4" style="width:120px; height:50px; text-align:center; font-size:24px; background:var(--bg2); border:1px solid var(--border); color:var(--text); border-radius:8px; margin-bottom:1.5rem;" placeholder="0000" inputmode="numeric">
+  <button type="button" class="pin-enter" onclick="checkPin()">Enter</button>
 </div>
 
 <!-- MAIN APP -->
@@ -155,7 +143,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 <script>
 // INIT
 const CORRECT_PIN = '0919';
-let pin = '';
 let currentEntry = null;
 let recognition = null;
 let isRecording = false;
@@ -166,10 +153,16 @@ let recordTime = 0;
 emailjs.init("YOUR_EMAILJS_KEY");
 
 // PIN
-function addPin(n) { if(pin.length < 4) pin += n; updateDots(); }
-function delPin() { pin = pin.slice(0,-1); updateDots(); }
-function updateDots() { document.getElementById('pin-dots').innerHTML = Array(4).fill(0).map((,i) => `<div class="pin-dot ${i < pin.length ? 'filled' : ''}"></div>`).join(''); }
-function checkPin() { if(pin === CORRECT_PIN) { document.getElementById('pin-screen').style.display = 'none'; document.getElementById('main-app').style.display = 'block'; } else { pin = ''; updateDots(); alert('Wrong PIN'); } }
+function checkPin() {
+  const pin = document.getElementById('pin-input').value;
+  if(pin === CORRECT_PIN) {
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+  } else {
+    document.getElementById('pin-input').value = '';
+    alert('Wrong PIN - try again');
+  }
+}
 
 // NAVIGATION
 function showScreen(name) {
@@ -369,8 +362,8 @@ function showToast(msg) {
   setTimeout(() => toast.remove(), 2000);
 }
 
-// INIT
-updateDots();
+// Init done
+
 </script>
 
 </body>
