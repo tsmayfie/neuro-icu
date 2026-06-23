@@ -816,6 +816,7 @@ function listSec(label, arr) {
 
 function renderCaseHTML(a) {
   let html = '';
+  // NEW FORMAT (HPI, Assessment, System recommendations)
   if (a.chiefComplaint) html += sec('Chief Complaint', a.chiefComplaint);
   if (a.hpi) html += sec('History of Present Illness', a.hpi);
   if (a.assessment) html += sec('Assessment', a.assessment);
@@ -832,6 +833,18 @@ function renderCaseHTML(a) {
   if (a.labsToReview) html += sec('Labs to Review', a.labsToReview);
   if (a.differential && a.differential.length) html += listSec('Differential', a.differential);
   if (a.whatImMissing && a.whatImMissing.length) html += listSec('What I\'m Missing', a.whatImMissing);
+  
+  // OLD FORMAT (for backwards compatibility with existing entries)
+  if (a.oneliner && !html) html += sec('One-liner', a.oneliner);
+  if (a.timeline && !html) html += sec('Timeline', a.timeline);
+  if (a.neuroExam && !html) html += sec('Neuro exam', a.neuroExam);
+  if (a.problemList && !html) html += listSec('Problem list', a.problemList);
+  if (a.immediatePriorities && !html) html += listSec('Immediate priorities', a.immediatePriorities);
+  if (a.localization && !html) html += sec('Localization', a.localization);
+  if (a.clinicalPearl && !html) html += sec('Clinical pearl', a.clinicalPearl);
+  if (a.topicsToReview && !html) html += listSec('Topics to review', a.topicsToReview);
+  
+  // Common fields
   if (a.transcript) html += `<div class="section-card"><div class="section-label">Original Transcript</div><div class="section-content muted">${esc(a.transcript)}</div></div>`;
   return html;
 }
