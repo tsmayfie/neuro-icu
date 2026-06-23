@@ -35,8 +35,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .pin-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--border2); transition: all 0.2s; }
 .pin-dot.filled { background: var(--accent); }
 .pin-grid { display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; margin: 1.5rem 0; }
-.pin-key { height: 60px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 20px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
-.pin-key:active { background: var(--bg3); transform: scale(0.95); }
+.pin-key { height: 60px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 20px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; user-select: none; -webkit-user-select: none; }
+.pin-key:active { background: var(--bg3); border-color: var(--accent); transform: scale(0.95); }
 .pin-enter { width: 120px; padding: 12px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; margin-top: 1rem; }
 
 /* MAIN */
@@ -96,19 +96,19 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <div class="pin-title">🧠 Neuro ICU</div>
   <div class="pin-dots" id="pin-dots"></div>
   <div class="pin-grid">
-    <button class="pin-key" onclick="addPin('1')">1</button>
-    <button class="pin-key" onclick="addPin('2')">2</button>
-    <button class="pin-key" onclick="addPin('3')">3</button>
-    <button class="pin-key" onclick="addPin('4')">4</button>
-    <button class="pin-key" onclick="addPin('5')">5</button>
-    <button class="pin-key" onclick="addPin('6')">6</button>
-    <button class="pin-key" onclick="addPin('7')">7</button>
-    <button class="pin-key" onclick="addPin('8')">8</button>
-    <button class="pin-key" onclick="addPin('9')">9</button>
-    <button class="pin-key" onclick="addPin('0')">0</button>
-    <button class="pin-key" onclick="delPin()">⌫</button>
+    <button type="button" class="pin-key" onclick="window.addPin('1'); return false;">1</button>
+    <button type="button" class="pin-key" onclick="window.addPin('2'); return false;">2</button>
+    <button type="button" class="pin-key" onclick="window.addPin('3'); return false;">3</button>
+    <button type="button" class="pin-key" onclick="window.addPin('4'); return false;">4</button>
+    <button type="button" class="pin-key" onclick="window.addPin('5'); return false;">5</button>
+    <button type="button" class="pin-key" onclick="window.addPin('6'); return false;">6</button>
+    <button type="button" class="pin-key" onclick="window.addPin('7'); return false;">7</button>
+    <button type="button" class="pin-key" onclick="window.addPin('8'); return false;">8</button>
+    <button type="button" class="pin-key" onclick="window.addPin('9'); return false;">9</button>
+    <button type="button" class="pin-key" onclick="window.addPin('0'); return false;">0</button>
+    <button type="button" class="pin-key" onclick="window.delPin(); return false;">⌫</button>
   </div>
-  <button class="pin-enter" onclick="checkPin()">Enter</button>
+  <button type="button" class="pin-enter" onclick="window.checkPin(); return false;">Enter</button>
 </div>
 
 <!-- MAIN APP -->
