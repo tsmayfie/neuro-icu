@@ -1,179 +1,98 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Neuro ICU">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Neuro ICU Recorder</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
-:root {
-  --bg: #0a0c0f;
-  --bg2: #111318;
-  --bg3: #1a1d24;
-  --border: rgba(255,255,255,0.08);
-  --border2: rgba(255,255,255,0.14);
-  --text: #f0f0ee;
-  --text2: #8a8d96;
-  --text3: #555860;
-  --accent: #4ade9b;
-  --accent2: #2db870;
-  --red: #ff5a5a;
-  --mono: 'DM Mono', monospace;
-  --sans: 'DM Sans', sans-serif;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6; }
-
-/* PIN SCREEN */
-#pin-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; padding: 2rem; }
-.pin-title { font-size: 22px; font-weight: 300; color: var(--text); margin-bottom: 2rem; }
-.pin-dots { display: flex; gap: 16px; margin-bottom: 2rem; }
-.pin-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--border2); transition: all 0.2s; }
-.pin-dot.filled { background: var(--accent); }
-.pin-grid { display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; margin: 1.5rem 0; }
-.pin-key { height: 60px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 20px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; user-select: none; -webkit-user-select: none; }
-.pin-key:active { background: var(--bg3); border-color: var(--accent); transform: scale(0.95); }
-.pin-enter { width: 120px; padding: 12px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; margin-top: 1rem; }
-
-/* MAIN */
-#main-app { display: none; min-height: 100vh; max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
-.screen { display: none; padding: 1.5rem 1.25rem; }
-.screen.active { display: block; }
-
-/* NAV */
-.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--bg2); border-top: 1px solid var(--border); display: flex; padding: 8px 0; z-index: 50; }
-.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; cursor: pointer; color: var(--text3); transition: all 0.15s; }
-.nav-item.active { color: var(--accent); }
-
-/* HEADER */
-.app-title { font-size: 24px; font-weight: 300; color: var(--text); margin-bottom: 1rem; }
-
-/* REC BUTTON */
-.rec-wrap { display: flex; flex-direction: column; align-items: center; padding: 2rem 0; }
-.rec-circle { width: 120px; height: 120px; border-radius: 50%; background: var(--bg2); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 40px; transition: all 0.2s; }
-.rec-circle:active { transform: scale(0.96); }
-.rec-circle.recording { border-color: var(--red); background: rgba(255,90,90,0.1); animation: pulse 1s infinite; }
-@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,90,90,0.3)} 50%{box-shadow:0 0 0 16px rgba(255,90,90,0)} }
-.rec-label { margin-top: 1rem; font-size: 13px; color: var(--text2); font-family: var(--mono); letter-spacing: 1px; text-transform: uppercase; }
-.timer { font-family: var(--mono); font-size: 32px; font-weight: 400; color: var(--text); margin: 1rem 0; letter-spacing: 3px; }
-
-/* TRANSCRIPT */
-.trans-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-height: 100px; max-height: 200px; overflow-y: auto; font-size: 14px; color: var(--text); margin: 1rem 0; }
-.trans-box.empty { color: var(--text3); font-style: italic; }
-
-/* BUTTONS */
-.btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1rem; }
-.btn { flex: 1; min-width: 120px; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border2); background: transparent; color: var(--text2); font-size: 13px; font-family: var(--mono); cursor: pointer; transition: all 0.15s; }
-.btn:active { background: var(--bg3); }
-.btn.primary { border-color: var(--accent); color: var(--accent); background: rgba(74,222,155,0.06); }
-
-/* ENTRIES */
-.entry-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 10px; cursor: pointer; transition: all 0.15s; }
-.entry-item:active { background: var(--bg3); }
-.entry-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
-.entry-date { font-size: 12px; color: var(--text3); }
-.entry-preview { font-size: 13px; color: var(--text2); margin-top: 6px; line-height: 1.4; }
-
-/* DETAIL */
-.back-btn { background: transparent; border: none; color: var(--accent); cursor: pointer; font-family: var(--mono); font-size: 13px; margin-bottom: 1rem; padding: 0; }
-.section { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 1rem; }
-.section-title { font-size: 12px; font-family: var(--mono); letter-spacing: 1px; color: var(--text3); text-transform: uppercase; margin-bottom: 8px; }
-.section-content { color: var(--text); font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-
-/* TOAST */
-.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 12px 20px; border-radius: 8px; font-size: 13px; z-index: 1000; animation: slideUp 0.3s ease-out; }
-@keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+body { margin:0; padding:0; background:#0a0c0f; color:#f0f0ee; font-family:sans-serif; height:100vh; display:flex; }
+#app { width:100%; max-width:480px; margin:auto; display:flex; flex-direction:column; }
+.screen { display:none; flex:1; padding:20px; overflow-y:auto; }
+.screen.active { display:flex; flex-direction:column; }
+h1 { font-size:28px; margin:0 0 20px 0; }
+input { width:100%; padding:15px; font-size:20px; border:1px solid #333; background:#111; color:#fff; border-radius:8px; margin:20px 0; text-align:center; }
+button { width:100%; padding:15px; margin:10px 0; font-size:16px; background:#4ade9b; color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+button:active { opacity:0.8; }
+textarea { width:100%; height:150px; padding:10px; background:#111; color:#fff; border:1px solid #333; border-radius:8px; font-size:14px; }
+.entry { background:#111; padding:15px; margin:10px 0; border-radius:8px; cursor:pointer; border:1px solid #333; }
+.entry-title { font-weight:bold; margin-bottom:5px; }
+.entry-date { font-size:12px; color:#888; }
+.nav { display:flex; gap:10px; padding:10px 0; border-top:1px solid #333; }
+.nav button { flex:1; margin:0; }
+.timer { font-size:32px; font-weight:bold; text-align:center; margin:20px 0; font-family:monospace; }
 </style>
 </head>
 <body>
 
-<!-- PIN SCREEN -->
-<div id="pin-screen">
-  <div class="pin-title">🧠 Neuro ICU</div>
-  <p style="color:var(--text2); margin-bottom:2rem; text-align:center;">Enter 4-digit PIN</p>
-  <input type="password" id="pin-input" maxlength="4" style="width:120px; height:50px; text-align:center; font-size:24px; background:var(--bg2); border:1px solid var(--border); color:var(--text); border-radius:8px; margin-bottom:1.5rem;" placeholder="0000" inputmode="numeric">
-  <button type="button" class="pin-enter" onclick="checkPin()">Enter</button>
-</div>
+<div id="app">
+  <!-- PIN SCREEN -->
+  <div id="pin-screen" class="screen active">
+    <h1 style="text-align:center;">🧠 Neuro ICU</h1>
+    <input id="pin-input" type="password" placeholder="Enter PIN" maxlength="4" inputmode="numeric">
+    <button onclick="checkPin()">Enter</button>
+  </div>
 
-<!-- MAIN APP -->
-<div id="main-app">
   <!-- RECORD SCREEN -->
-  <div id="rec-screen" class="screen active">
-    <h2 class="app-title">Record Entry</h2>
-    <div class="rec-wrap">
-      <div class="rec-circle" id="rec-btn" onclick="toggleRecord()">🎤</div>
-      <div class="rec-label" id="rec-label">Tap to record</div>
-      <div class="timer" id="timer">0:00</div>
-    </div>
-    <div class="trans-box" id="transcript" class="empty">Transcript will appear here...</div>
-    <div class="btn-group">
-      <button class="btn primary" id="save-btn" onclick="saveEntry()" style="display:none;">Save Entry</button>
-      <button class="btn" id="cancel-btn" onclick="cancelRecord()" style="display:none;">Cancel</button>
-    </div>
+  <div id="record-screen" class="screen">
+    <h1>Record</h1>
+    <div class="timer" id="timer">0:00</div>
+    <button id="rec-btn" onclick="toggleRecord()">🎤 Start Recording</button>
+    <textarea id="transcript" placeholder="Transcript will appear here..." readonly></textarea>
+    <button id="save-btn" onclick="saveEntry()" style="display:none;">Save Entry</button>
+    <button id="cancel-btn" onclick="cancelRecord()" style="display:none;">Cancel</button>
   </div>
 
   <!-- LIBRARY SCREEN -->
-  <div id="lib-screen" class="screen">
-    <h2 class="app-title">Library</h2>
-    <div id="entries-list"></div>
+  <div id="library-screen" class="screen">
+    <h1>Library</h1>
+    <div id="entries"></div>
   </div>
 
   <!-- DETAIL SCREEN -->
   <div id="detail-screen" class="screen">
-    <button class="back-btn" onclick="backToList()">← Back</button>
-    <h2 id="detail-title" class="app-title">Entry</h2>
-    <div id="detail-body"></div>
-    <div class="btn-group">
-      <button class="btn primary" onclick="copyEntry()">📋 Copy</button>
-      <button class="btn" onclick="deleteEntry()">Delete</button>
-    </div>
+    <h1 id="detail-title">Entry</h1>
+    <textarea id="detail-text" readonly></textarea>
+    <button onclick="backToLibrary()">← Back</button>
+    <button onclick="copyEntry()">📋 Copy</button>
+    <button onclick="deleteEntry()">Delete</button>
   </div>
 
-  <!-- NAV -->
-  <div class="bottom-nav">
-    <div class="nav-item active" onclick="showScreen('rec')">⏺️ Record</div>
-    <div class="nav-item" onclick="showScreen('lib')">📂 Library</div>
+  <!-- NAVIGATION -->
+  <div class="nav">
+    <button onclick="showScreen('record')">Record</button>
+    <button onclick="showScreen('library')">Library</button>
   </div>
 </div>
 
 <script>
-// INIT
 const CORRECT_PIN = '0919';
-let currentEntry = null;
-let recognition = null;
 let isRecording = false;
+let recognition = null;
 let fullTranscript = '';
-let timerInterval = null;
 let recordTime = 0;
-
-emailjs.init("YOUR_EMAILJS_KEY");
+let timerInt = null;
+let currentEntry = null;
 
 // PIN
 function checkPin() {
   const pin = document.getElementById('pin-input').value;
   if(pin === CORRECT_PIN) {
-    document.getElementById('pin-screen').style.display = 'none';
-    document.getElementById('main-app').style.display = 'block';
+    document.getElementById('pin-screen').classList.remove('active');
+    showScreen('record');
   } else {
+    alert('Wrong PIN');
     document.getElementById('pin-input').value = '';
-    alert('Wrong PIN - try again');
   }
 }
 
-// NAVIGATION
+// SCREENS
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(name + '-screen').classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  event.target.classList.add('active');
-  if(name === 'lib') loadEntries();
+  if(name === 'library') loadEntries();
 }
 
-// RECORDING
+// RECORD
 function toggleRecord() {
   if(isRecording) stopRecord();
   else startRecord();
@@ -192,14 +111,13 @@ function startRecord() {
   isRecording = true;
   recordTime = 0;
   
-  document.getElementById('rec-btn').classList.add('recording');
-  document.getElementById('rec-label').textContent = 'Recording...';
+  document.getElementById('rec-btn').textContent = '⏹ Stop Recording';
+  document.getElementById('rec-btn').style.background = '#ff5a5a';
   document.getElementById('save-btn').style.display = 'block';
   document.getElementById('cancel-btn').style.display = 'block';
-  document.getElementById('transcript').classList.remove('empty');
-  document.getElementById('transcript').textContent = '';
+  document.getElementById('transcript').value = '';
   
-  timerInterval = setInterval(() => {
+  timerInt = setInterval(() => {
     recordTime++;
     const m = Math.floor(recordTime / 60);
     const s = recordTime % 60;
@@ -212,7 +130,7 @@ function startRecord() {
       if(e.results[i].isFinal) fullTranscript += e.results[i][0].transcript + ' ';
       else interim += e.results[i][0].transcript;
     }
-    document.getElementById('transcript').textContent = fullTranscript + interim;
+    document.getElementById('transcript').value = fullTranscript + interim;
   };
   
   recognition.start();
@@ -220,150 +138,85 @@ function startRecord() {
 
 function stopRecord() {
   isRecording = false;
-  clearInterval(timerInterval);
   if(recognition) recognition.stop();
+  clearInterval(timerInt);
   
-  document.getElementById('rec-btn').classList.remove('recording');
-  document.getElementById('rec-label').textContent = 'Tap to record';
-  document.getElementById('save-btn').style.display = 'none';
-  document.getElementById('cancel-btn').style.display = 'none';
-  
-  if(!fullTranscript.trim()) {
-    document.getElementById('transcript').classList.add('empty');
-    document.getElementById('transcript').textContent = 'No audio detected';
-  }
+  document.getElementById('rec-btn').textContent = '🎤 Start Recording';
+  document.getElementById('rec-btn').style.background = '#4ade9b';
 }
 
 function cancelRecord() {
   if(recognition) recognition.stop();
   isRecording = false;
-  clearInterval(timerInterval);
+  clearInterval(timerInt);
   fullTranscript = '';
   recordTime = 0;
   
-  document.getElementById('rec-btn').classList.remove('recording');
-  document.getElementById('rec-label').textContent = 'Tap to record';
+  document.getElementById('timer').textContent = '0:00';
+  document.getElementById('transcript').value = '';
+  document.getElementById('rec-btn').textContent = '🎤 Start Recording';
+  document.getElementById('rec-btn').style.background = '#4ade9b';
   document.getElementById('save-btn').style.display = 'none';
   document.getElementById('cancel-btn').style.display = 'none';
-  document.getElementById('transcript').classList.add('empty');
-  document.getElementById('transcript').textContent = 'Transcript will appear here...';
-  document.getElementById('timer').textContent = '0:00';
 }
 
-// ENTRIES
 function saveEntry() {
-  if(!fullTranscript.trim()) { alert('No transcript to save'); return; }
+  if(!fullTranscript.trim()) { alert('No transcript'); return; }
   
   const entry = {
     id: Date.now(),
-    title: 'Case - ' + new Date().toLocaleDateString(),
+    title: 'Case ' + new Date().toLocaleDateString(),
     transcript: fullTranscript.trim(),
-    date: new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}),
-    time: new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})
+    date: new Date().toLocaleDateString(),
+    time: new Date().toLocaleTimeString()
   };
   
-  const entries = JSON.parse(localStorage.getItem('neuro_entries') || '[]');
+  const entries = JSON.parse(localStorage.getItem('entries') || '[]');
   entries.unshift(entry);
-  localStorage.setItem('neuro_entries', JSON.stringify(entries));
+  localStorage.setItem('entries', JSON.stringify(entries));
   
-  currentEntry = entry;
-  fullTranscript = '';
-  recordTime = 0;
-  
-  document.getElementById('rec-btn').classList.remove('recording');
-  document.getElementById('rec-label').textContent = 'Tap to record';
-  document.getElementById('save-btn').style.display = 'none';
-  document.getElementById('cancel-btn').style.display = 'none';
-  document.getElementById('transcript').classList.add('empty');
-  document.getElementById('transcript').textContent = 'Transcript will appear here...';
-  document.getElementById('timer').textContent = '0:00';
-  
-  showToast('Entry saved ✓');
-  
-  // Auto-send to email if configured
-  const email = localStorage.getItem('neuro_email');
-  if(email) sendToEmail(entry, email);
+  alert('Saved! ✓');
+  cancelRecord();
 }
 
+// LIBRARY
 function loadEntries() {
-  const entries = JSON.parse(localStorage.getItem('neuro_entries') || '[]');
-  const list = document.getElementById('entries-list');
-  
-  if(!entries.length) {
-    list.innerHTML = '<p style="color:var(--text3);text-align:center;padding:2rem;">No entries yet. Record one to get started!</p>';
-    return;
-  }
-  
-  list.innerHTML = entries.map((e, i) => `
-    <div class="entry-item" onclick="viewEntry(${i})">
+  const entries = JSON.parse(localStorage.getItem('entries') || '[]');
+  const html = entries.length ? entries.map((e, i) => `
+    <div class="entry" onclick="viewEntry(${i})">
       <div class="entry-title">${e.title}</div>
       <div class="entry-date">${e.date} ${e.time}</div>
-      <div class="entry-preview">${e.transcript.substring(0, 60)}...</div>
     </div>
-  `).join('');
+  `).join('') : '<p style="color:#888;">No entries yet</p>';
+  document.getElementById('entries').innerHTML = html;
 }
 
 function viewEntry(idx) {
-  const entries = JSON.parse(localStorage.getItem('neuro_entries') || '[]');
+  const entries = JSON.parse(localStorage.getItem('entries') || '[]');
   currentEntry = entries[idx];
-  
   document.getElementById('detail-title').textContent = currentEntry.title;
-  document.getElementById('detail-body').innerHTML = `
-    <div class="section">
-      <div class="section-title">Date & Time</div>
-      <div class="section-content">${currentEntry.date} ${currentEntry.time}</div>
-    </div>
-    <div class="section">
-      <div class="section-title">Transcript</div>
-      <div class="section-content">${currentEntry.transcript}</div>
-    </div>
-  `;
-  
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('detail-screen').classList.add('active');
+  document.getElementById('detail-text').value = currentEntry.transcript;
+  showScreen('detail');
 }
 
-function backToList() {
+function backToLibrary() {
   currentEntry = null;
-  showScreen('lib');
-}
-
-function deleteEntry() {
-  if(!confirm('Delete this entry?')) return;
-  const entries = JSON.parse(localStorage.getItem('neuro_entries') || '[]');
-  entries.splice(entries.indexOf(currentEntry), 1);
-  localStorage.setItem('neuro_entries', JSON.stringify(entries));
-  backToList();
-  showToast('Entry deleted');
+  showScreen('library');
 }
 
 function copyEntry() {
   if(!currentEntry) return;
-  const text = currentEntry.title + '\n\n' + currentEntry.transcript;
-  navigator.clipboard.writeText(text);
-  showToast('Copied to clipboard ✓');
+  navigator.clipboard.writeText(currentEntry.transcript);
+  alert('Copied! ✓');
 }
 
-// EMAIL
-function sendToEmail(entry, email) {
-  const body = `NEURO ICU ENTRY\n\nDate: ${entry.date} ${entry.time}\n\nTRANSCRIPT:\n${entry.transcript}`;
-  
-  // This requires EmailJS setup - for now just log
-  console.log('Would send to:', email);
-  showToast('Sent to ' + email);
+function deleteEntry() {
+  if(!confirm('Delete?')) return;
+  const entries = JSON.parse(localStorage.getItem('entries') || '[]');
+  entries.splice(entries.indexOf(currentEntry), 1);
+  localStorage.setItem('entries', JSON.stringify(entries));
+  backToLibrary();
 }
-
-// UTILS
-function showToast(msg) {
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 2000);
-}
-
-// Init done
-
 </script>
 
 </body>
