@@ -162,6 +162,7 @@ function cancelRecord() {
   document.getElementById('transcript').value = '';
   document.getElementById('rec-btn').textContent = '🎤 Start Recording';
   document.getElementById('rec-btn').style.background = '#4ade9b';
+  document.getElementById('rec-btn').disabled = false;
   document.getElementById('save-btn').style.display = 'none';
   document.getElementById('cancel-btn').style.display = 'none';
 }
@@ -182,7 +183,17 @@ function saveEntry() {
   localStorage.setItem('entries', JSON.stringify(entries));
   
   alert('Saved! ✓');
-  cancelRecord();
+  
+  // Reset for next recording
+  fullTranscript = '';
+  recordTime = 0;
+  document.getElementById('timer').textContent = '0:00';
+  document.getElementById('transcript').value = '';
+  document.getElementById('rec-btn').textContent = '🎤 Start Recording';
+  document.getElementById('rec-btn').style.background = '#4ade9b';
+  document.getElementById('rec-btn').disabled = false;
+  document.getElementById('save-btn').style.display = 'none';
+  document.getElementById('cancel-btn').style.display = 'none';
 }
 
 // LIBRARY
