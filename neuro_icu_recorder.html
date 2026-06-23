@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Neuro ICU Recorder</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 body { margin:0; padding:0; background:#0a0c0f; color:#f0f0ee; font-family:sans-serif; height:100vh; display:flex; }
 #app { width:100%; max-width:480px; margin:auto; display:flex; flex-direction:column; }
@@ -13,6 +14,7 @@ h1 { font-size:28px; margin:0 0 20px 0; }
 input { width:100%; padding:15px; font-size:20px; border:1px solid #333; background:#111; color:#fff; border-radius:8px; margin:20px 0; text-align:center; }
 button { width:100%; padding:15px; margin:10px 0; font-size:16px; background:#4ade9b; color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
 button:active { opacity:0.8; }
+button:disabled { opacity:0.5; cursor:not-allowed; }
 textarea { width:100%; height:150px; padding:10px; background:#111; color:#fff; border:1px solid #333; border-radius:8px; font-size:14px; }
 .entry { background:#111; padding:15px; margin:10px 0; border-radius:8px; cursor:pointer; border:1px solid #333; }
 .entry-title { font-weight:bold; margin-bottom:5px; }
@@ -20,6 +22,14 @@ textarea { width:100%; height:150px; padding:10px; background:#111; color:#fff; 
 .nav { display:flex; gap:10px; padding:10px 0; border-top:1px solid #333; }
 .nav button { flex:1; margin:0; }
 .timer { font-size:32px; font-weight:bold; text-align:center; margin:20px 0; font-family:monospace; }
+.loading { text-align:center; padding:20px; }
+.spinner { display:inline-block; width:20px; height:20px; border:3px solid #333; border-top:3px solid #4ade9b; border-radius:50%; animation:spin 1s linear infinite; }
+@keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+.result-section { background:#111; border:1px solid #333; border-radius:8px; padding:15px; margin:10px 0; }
+.result-label { font-size:12px; color:#888; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+.result-content { font-size:14px; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.result-list { padding-left:20px; }
+.result-list li { margin:5px 0; }
 </style>
 </head>
 <body>
@@ -38,8 +48,17 @@ textarea { width:100%; height:150px; padding:10px; background:#111; color:#fff; 
     <div class="timer" id="timer">0:00</div>
     <button id="rec-btn" onclick="toggleRecord()">🎤 Start Recording</button>
     <textarea id="transcript" placeholder="Transcript will appear here..." readonly></textarea>
-    <button id="save-btn" onclick="saveEntry()" style="display:none;">Save Entry</button>
+    <button id="save-btn" onclick="parseAndSave()" style="display:none;">💾 Save & Analyze</button>
     <button id="cancel-btn" onclick="cancelRecord()" style="display:none;">Cancel</button>
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div id="results-screen" class="screen">
+    <h1>Analysis</h1>
+    <div id="results-content"></div>
+    <button onclick="copyResults()">📋 Copy All</button>
+    <button onclick="sendToGmail()">📧 Send to Gmail</button>
+    <button onclick="newEntry()">➕ New Entry</button>
   </div>
 
   <!-- LIBRARY SCREEN -->
@@ -65,6 +84,8 @@ textarea { width:100%; height:150px; padding:10px; background:#111; color:#fff; 
 </div>
 
 <script>
+emailjs.init("YOUR_EMAILJS_KEY");
+
 const CORRECT_PIN = '0919';
 let isRecording = false;
 let recognition = null;
@@ -72,8 +93,8 @@ let fullTranscript = '';
 let recordTime = 0;
 let timerInt = null;
 let currentEntry = null;
+let currentAnalysis = null;
 
-// PIN
 function checkPin() {
   const pin = document.getElementById('pin-input').value;
   if(pin === CORRECT_PIN) {
@@ -85,14 +106,12 @@ function checkPin() {
   }
 }
 
-// SCREENS
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(name + '-screen').classList.add('active');
   if(name === 'library') loadEntries();
 }
 
-// RECORD
 function toggleRecord() {
   if(isRecording) stopRecord();
   else startRecord();
@@ -142,7 +161,6 @@ function stopRecord() {
   if(recognition) recognition.stop();
   clearInterval(timerInt);
   
-  // Keep transcript visible, show save buttons
   document.getElementById('transcript').value = fullTranscript;
   document.getElementById('rec-btn').textContent = '🎤 Start Recording';
   document.getElementById('rec-btn').style.background = '#4ade9b';
@@ -167,24 +185,92 @@ function cancelRecord() {
   document.getElementById('cancel-btn').style.display = 'none';
 }
 
-function saveEntry() {
+async function parseAndSave() {
   if(!fullTranscript.trim()) { alert('No transcript'); return; }
   
-  const entry = {
-    id: Date.now(),
-    title: 'Case ' + new Date().toLocaleDateString(),
-    transcript: fullTranscript.trim(),
-    date: new Date().toLocaleDateString(),
-    time: new Date().toLocaleTimeString()
-  };
+  // Show loading
+  document.getElementById('results-content').innerHTML = '<div class="loading"><div class="spinner"></div><p>Analyzing with Claude...</p></div>';
+  showScreen('results');
   
-  const entries = JSON.parse(localStorage.getItem('entries') || '[]');
-  entries.unshift(entry);
-  localStorage.setItem('entries', JSON.stringify(entries));
+  try {
+    const response = await fetch('/api/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript: fullTranscript })
+    });
+    
+    if(!response.ok) throw new Error('Parse failed');
+    const analysis = await response.json();
+    
+    currentAnalysis = {
+      ...analysis,
+      transcript: fullTranscript,
+      date: new Date().toLocaleDateString(),
+      time: new Date().toLocaleTimeString(),
+      id: Date.now()
+    };
+    
+    displayResults();
+    
+    // Save to local storage
+    const entries = JSON.parse(localStorage.getItem('entries') || '[]');
+    entries.unshift(currentAnalysis);
+    localStorage.setItem('entries', JSON.stringify(entries));
+    
+  } catch(error) {
+    console.error(error);
+    alert('Error analyzing: ' + error.message);
+    showScreen('record');
+  }
+}
+
+function displayResults() {
+  let html = '';
   
-  alert('Saved! ✓');
+  if(currentAnalysis.chiefComplaint) html += `<div class="result-section"><div class="result-label">Chief Complaint</div><div class="result-content">${esc(currentAnalysis.chiefComplaint)}</div></div>`;
+  if(currentAnalysis.hpi) html += `<div class="result-section"><div class="result-label">HPI</div><div class="result-content">${esc(currentAnalysis.hpi)}</div></div>`;
+  if(currentAnalysis.assessment) html += `<div class="result-section"><div class="result-label">Assessment</div><div class="result-content">${esc(currentAnalysis.assessment)}</div></div>`;
+  if(currentAnalysis.neuro) html += `<div class="result-section"><div class="result-label">Neuro</div><div class="result-content">${esc(currentAnalysis.neuro)}</div></div>`;
+  if(currentAnalysis.cardio) html += `<div class="result-section"><div class="result-label">Cardio</div><div class="result-content">${esc(currentAnalysis.cardio)}</div></div>`;
+  if(currentAnalysis.pulmonary) html += `<div class="result-section"><div class="result-label">Pulmonary</div><div class="result-content">${esc(currentAnalysis.pulmonary)}</div></div>`;
+  if(currentAnalysis.renal) html += `<div class="result-section"><div class="result-label">Renal</div><div class="result-content">${esc(currentAnalysis.renal)}</div></div>`;
+  if(currentAnalysis.gi) html += `<div class="result-section"><div class="result-label">GI</div><div class="result-content">${esc(currentAnalysis.gi)}</div></div>`;
+  if(currentAnalysis.id) html += `<div class="result-section"><div class="result-label">ID</div><div class="result-content">${esc(currentAnalysis.id)}</div></div>`;
+  if(currentAnalysis.heme) html += `<div class="result-section"><div class="result-label">Heme/Endo</div><div class="result-content">${esc(currentAnalysis.heme)}</div></div>`;
+  if(currentAnalysis.prophylaxis) html += `<div class="result-section"><div class="result-label">Prophylaxis</div><div class="result-content">${esc(currentAnalysis.prophylaxis)}</div></div>`;
+  if(currentAnalysis.lines) html += `<div class="result-section"><div class="result-label">Lines/Drains</div><div class="result-content">${esc(currentAnalysis.lines)}</div></div>`;
+  if(currentAnalysis.exam) html += `<div class="result-section"><div class="result-label">Physical Exam</div><div class="result-content">${esc(currentAnalysis.exam)}</div></div>`;
+  if(currentAnalysis.labs) html += `<div class="result-section"><div class="result-label">Labs</div><div class="result-content">${esc(currentAnalysis.labs)}</div></div>`;
+  if(currentAnalysis.differential && currentAnalysis.differential.length) html += `<div class="result-section"><div class="result-label">Differential</div><ul class="result-list">${currentAnalysis.differential.map(d => `<li>${esc(d)}</li>`).join('')}</ul></div>`;
   
-  // Reset for next recording
+  document.getElementById('results-content').innerHTML = html;
+}
+
+function copyResults() {
+  let text = '';
+  if(currentAnalysis.chiefComplaint) text += 'CHIEF COMPLAINT\n' + currentAnalysis.chiefComplaint + '\n\n';
+  if(currentAnalysis.hpi) text += 'HPI\n' + currentAnalysis.hpi + '\n\n';
+  if(currentAnalysis.assessment) text += 'ASSESSMENT\n' + currentAnalysis.assessment + '\n\n';
+  if(currentAnalysis.neuro) text += 'NEURO\n' + currentAnalysis.neuro + '\n\n';
+  if(currentAnalysis.cardio) text += 'CARDIO\n' + currentAnalysis.cardio + '\n\n';
+  if(currentAnalysis.pulmonary) text += 'PULMONARY\n' + currentAnalysis.pulmonary + '\n\n';
+  if(currentAnalysis.renal) text += 'RENAL\n' + currentAnalysis.renal + '\n\n';
+  if(currentAnalysis.gi) text += 'GI\n' + currentAnalysis.gi + '\n\n';
+  if(currentAnalysis.id) text += 'ID\n' + currentAnalysis.id + '\n\n';
+  if(currentAnalysis.heme) text += 'HEME/ENDO\n' + currentAnalysis.heme + '\n\n';
+  if(currentAnalysis.prophylaxis) text += 'PROPHYLAXIS\n' + currentAnalysis.prophylaxis + '\n\n';
+  if(currentAnalysis.lines) text += 'LINES/DRAINS\n' + currentAnalysis.lines + '\n\n';
+  
+  navigator.clipboard.writeText(text);
+  alert('Copied to clipboard! ✓');
+}
+
+async function sendToGmail() {
+  alert('Gmail integration coming next! For now, entries are saved locally.');
+}
+
+function newEntry() {
+  currentAnalysis = null;
   fullTranscript = '';
   recordTime = 0;
   document.getElementById('timer').textContent = '0:00';
@@ -194,14 +280,14 @@ function saveEntry() {
   document.getElementById('rec-btn').disabled = false;
   document.getElementById('save-btn').style.display = 'none';
   document.getElementById('cancel-btn').style.display = 'none';
+  showScreen('record');
 }
 
-// LIBRARY
 function loadEntries() {
   const entries = JSON.parse(localStorage.getItem('entries') || '[]');
   const html = entries.length ? entries.map((e, i) => `
     <div class="entry" onclick="viewEntry(${i})">
-      <div class="entry-title">${e.title}</div>
+      <div class="entry-title">${e.assessment || e.chiefComplaint || 'Entry'}</div>
       <div class="entry-date">${e.date} ${e.time}</div>
     </div>
   `).join('') : '<p style="color:#888;">No entries yet</p>';
@@ -211,7 +297,7 @@ function loadEntries() {
 function viewEntry(idx) {
   const entries = JSON.parse(localStorage.getItem('entries') || '[]');
   currentEntry = entries[idx];
-  document.getElementById('detail-title').textContent = currentEntry.title;
+  document.getElementById('detail-title').textContent = currentEntry.assessment || 'Entry';
   document.getElementById('detail-text').value = currentEntry.transcript;
   showScreen('detail');
 }
@@ -222,7 +308,6 @@ function backToLibrary() {
 }
 
 function copyEntry() {
-  if(!currentEntry) return;
   navigator.clipboard.writeText(currentEntry.transcript);
   alert('Copied! ✓');
 }
@@ -233,6 +318,11 @@ function deleteEntry() {
   entries.splice(entries.indexOf(currentEntry), 1);
   localStorage.setItem('entries', JSON.stringify(entries));
   backToLibrary();
+}
+
+function esc(str) {
+  if(!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 </script>
 
